@@ -37,13 +37,15 @@ Features:
 
 """
 
-MESSAGES_TO_MERGE =  50
+MESSAGES_TO_MERGE =  15
 TIME_TO_PUBLISH = 4 * 60 * 60 #s
-MESSAGES_BEFORE_PUBLISH = 20
+MESSAGES_BEFORE_PUBLISH = 400
 IDLE_WAIT = 60 * 10
 NB_WORKERS = 16
 MERGERESULT_PATH = './build/mergeresults'
 MESSAGE_BLOCK_SIZE = 10      # max 10 (should be 10)
+
+import commands
 
 class Aggregator:
     def __init__(self, input_queue, work_folder, bucket, prefix, region, aws_cred):
@@ -120,6 +122,11 @@ class Aggregator:
                 sys.exit(0)
             # Publish if necessary
             publish = False
+            # Check disk space available
+            dev, b, used, avail, p, f = commands.getoutput("df /mnt | tail -1").split()
+            # Publish if using half disk capacity... this is normally bad...
+            if float(used) / float(avail) > 0.5:
+                publish = True
             if len(results) > MESSAGES_BEFORE_PUBLISH:
                 publish = True
             if (datetime.utcnow() - last_flush).seconds > TIME_TO_PUBLISH:
