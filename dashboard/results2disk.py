@@ -41,6 +41,7 @@ def save_json_to_file(path, value, compress, pretty_print):
 
 # Size of internal histograms.json cache
 HGRAMS_JSON_CACHE_SIZE = 15
+FALLBACK_REVISION = "http://hg.mozilla.org/mozilla-central/rev/518f5bff0ae4"
 
 class ChannelVersionManager:
     """ Manages data stored for a specific channel / version """
@@ -154,8 +155,12 @@ class ChannelVersionManager:
             try:
                 request = urlopen(url)
             except HTTPError:
-                print >> sys.stderr, "Failed to fetch revision: %s" % revision
-                raise
+                url = "http://localhost:9898/histograms?revision=%s" % FALLBACK_REVISION
+                try:
+                    request = urlopen(url)
+                except:
+                    print >> sys.stderr, "Failed to fetch revision: %s" % revision
+                    raise
             histograms = json.load(request)
             # Cache results
             i = self.histograms_json_cache_next
