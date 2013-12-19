@@ -80,7 +80,7 @@ class Aggregator:
             k.get_contents_to_filename(filename)
         except:
             print >> sys.stderr, "Failed to get: " + filename
-            os.system('touch filename')
+            os.system('touch ' + filename)
 
     def put_file(self, filename, prefix):
         k = Key(self.bucket)
