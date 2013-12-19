@@ -37,9 +37,9 @@ Features:
 
 """
 
-MESSAGE_BLOCKS_TO_MERGE = 5 # x 10
+MESSAGES_TO_MERGE =  50
 TIME_TO_PUBLISH = 4 * 60 * 60 #s
-MESSAGE_BLOCKS_BEFORE_PUBLISH = 50
+MESSAGES_BEFORE_PUBLISH = 20
 IDLE_WAIT = 60 * 10
 NB_WORKERS = 16
 MERGERESULT_PATH = './build/mergeresults'
@@ -54,7 +54,7 @@ class Aggregator:
         self.prefix                 = prefix
         self.region                 = region
         self.aws_cred               = aws_cred
-        self.analysis_bucket_name   = "jonasfj-telemetry-analysis"
+        self.analysis_bucket_name   = "dashboard-mango-aggregates"
         if self.prefix != '' and not self.prefix.endswith('/'):
             self.prefix += '/'
         # Clear the work folder
@@ -85,56 +85,55 @@ class Aggregator:
         k.set_contents_from_filename(filename)
 
     def process_queue(self):
-        # connect to sqs
-        sqs = sqs_connect(self.region, **self.aws_cred)
-        queue = sqs.get_queue(self.input_queue_name)
-        queue.set_message_class(JSONMessage)
+        # Find files exported and not yet merged
+        files_exported = []
+        with open('files-exported', 'r') as f:
+            for line in f:
+                files_exported.append(line.strip())
+        with open(self.files_processed_path, 'r') as f:
+            for line in f:
+                if line.strip() not in files_exported:
+                    print >> sys.stderr, "File missing from exported: " + line
+                    sys.exit(1)
+                files_exported.remove(line.strip())
+
         # messages processed since last flush
-        processed_msgblocks = []
+        results = []
         last_flush = datetime.utcnow()
         while True:
             print "### Handling messages"
 
             # get new_messages from sqs
             messages = []
-            for i in xrange(0, MESSAGE_BLOCKS_TO_MERGE):
-                msgs = queue.get_messages(num_messages = MESSAGE_BLOCK_SIZE)
-                messages += msgs
-                if len(msgs) > 0:
-                    processed_msgblocks.append(msgs)
-                else:
-                    break
+            for i in xrange(0, MESSAGES_TO_MERGE):
+                msg = files_exported.pop()
+                messages.append(msg)
+                results.append(msg)
             print " - Fetched %i messages" % len(messages)
             # merge messages into data folder
             if len(messages) > 0:
                 self.merge_messages(messages)
             else:
-                sleep(IDLE_WAIT)
+                if len(results) > 0:
+                    self.publish_results()
+                print "I think we're done"
+                sys.exit(0)
             # Publish if necessary
             publish = False
-            if len(processed_msgblocks) > MESSAGE_BLOCKS_BEFORE_PUBLISH:
+            if len(results) > MESSAGES_BEFORE_PUBLISH:
                 publish = True
             if (datetime.utcnow() - last_flush).seconds > TIME_TO_PUBLISH:
                 publish = True
             if publish:
                 # Skip publishing if there are no new results
-                if len(processed_msgblocks) == 0:
+                if len(results) == 0:
                     continue
                 self.publish_results()
-                # delete messages
-                for block in processed_msgblocks:
-                    queue.delete_message_batch(block)
-                processed_msgblocks = []
+                results = []
                 last_flush = datetime.utcnow()
 
-    def merge_messages(self, msgs):
+    def merge_messages(self, results):
         started = datetime.utcnow()
-        # Find results to download
-        results = []
-        for msg in msgs:
-            if msg['target-prefix'] != None:
-                results.append(msg['target-prefix'] + 'result.txt')
-
         # Download results
         if len(results) > 0:
             target_paths = []
@@ -199,17 +198,8 @@ class Aggregator:
         # Update FILES_PROCESSED and FILES_MISSING
         with open(self.files_missing_path, 'a+') as files_missing:
             with open(self.files_processed_path, 'a+') as files_processed:
-                for msg in msgs:
-                    # If there's no target-prefix the message failed
-                    if msg['target-prefix'] is None:
-                        # If target-prefix is None, then the message failed... we add the
-                        # input files to list of missing files
-                        for f in msg['files']:
-                            files_missing.write(f + "\n")
-                    else:
-                        # Update FILES_PROCESSED
-                        for f in msg['files']:
-                            files_processed.write(f + "\n")
+                for result in results:
+                    files_processed.write(result + "\n")
 
     def publish_results(self):
         # Create work folder for update process
