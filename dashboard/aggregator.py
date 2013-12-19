@@ -157,7 +157,7 @@ class Aggregator:
 
             # Start downloaders
             downloaders = []
-            for i in xrange(0, 4):
+            for i in xrange(0, 15):
                 downloader = Downloader(download_queue, result_queue,
                                         self.analysis_bucket_name, False, False,
                                         self.region, self.aws_cred)
