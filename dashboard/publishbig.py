@@ -67,14 +67,16 @@ def handle_input():
     return False
   unpacked_prefix = os.path.join(temp_folder, 'result.txt-')
   try:
-    do('../lz4/lz4 -d %s | split -d -l 10000 - %s-' % (result_path, unpacked_prefix))
+    do('../lz4/lz4 -d %s | split -d -l 5000 - %s' % (result_path, unpacked_prefix))
   except:
     return False
   unpacked = glob(unpacked_prefix + '*')
   if len(unpacked) < 2:
     print >> sys.stderr, "There should be more than 2 files!"
     return False
+  unpacked.sort()
   for f in unpacked:
+    print "doing: " + f
     do('./build/mergeresults -f %s -i %s' % (data_folder, f))
   return True
 
@@ -128,6 +130,7 @@ for prefix in inputs:
           missing.append(p.strip())
     count += 1
     if count > 4:
+      print "Publishing results"
       # Create work folder for update process
       update_folder = os.path.join(work_folder, "update")
       shutil.rmtree(update_folder, ignore_errors = True)
@@ -150,8 +153,8 @@ for prefix in inputs:
       mkdirp(data_folder)
       count = 0
   except:
+    print >> sys.stderr, "UNHANDLED ERROR: Aborting parts so far, due to:"
     print_exc(file = sys.stderr)
-    sys.exit(1)
     # Okay, everything since last publication failed
     count = 0
     missing += processed
