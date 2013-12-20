@@ -56,7 +56,7 @@ result_path = os.path.join(temp_folder, 'result.txt.lz4')
 def do(cmd):
   retval = os.system(cmd)
   if retval != 0:
-    print sys.stderr, "Command failed: " + cmd
+    print >> sys.stderr, "Command failed: " + cmd
     raise Exception("Command failed: " + cmd)
 
 
@@ -114,7 +114,7 @@ for prefix in inputs:
   try:
     get_input(prefix + 'parts', parts_path)
     #get_input(prefix + 'result.txt.lz4', result_path)
-    do("aws s3 cp s3://dashboard-mango-aggregates/" + prefix + 'result.txt.lz4 ' + result_path)
+    do("aws s3 cp s3://dashboard-mango-aggregates/" + prefix + 'result.txt.lz4 ' + result_path + " --region 'us-west-2'")
     print "Downloaded %s in %s s" % (prefix, (datetime.utcnow() - started).seconds)
     if handle_input():
       print "Handled input in %s s" % ((datetime.utcnow() - started).seconds)
