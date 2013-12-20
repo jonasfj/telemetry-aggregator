@@ -6,6 +6,7 @@ from glob import glob
 import os, sys, gzip
 from datetime import datetime
 from updateresults import updateresults
+from traceback import print_exc
 
 
 aws_cred = {
@@ -15,9 +16,10 @@ aws_cred = {
 
 work_folder = "/mnt/work/work-folder/"
 publish_prefix = "v6/"
-publish_bucket = "telemetry-dashboard"
+publish_bucket_name = "telemetry-dashboard"
 
 s3 = s3_connect('us-west-2')
+publish_bucket = s3.get_bucket(publish_bucket_name)
 input_bucket = s3.get_bucket('dashboard-mango-aggregates')
 
 # Clear work-folder
@@ -83,7 +85,7 @@ files_processed_path = os.path.join(work_folder, 'FILES_PROCESSED')
 
 def get_file(prefix, filename):
   try:
-    k = Key(publish_prefix)
+    k = Key(publish_bucket)
     k.key = publish_prefix + prefix
     k.get_contents_to_filename(filename)
   except:
@@ -91,7 +93,7 @@ def get_file(prefix, filename):
     os.system('touch ' + filename)
 
 def put_file(filename, prefix):
-  k = Key(publish_prefix)
+  k = Key(publish_bucket)
   k.key = publish_prefix + prefix
   k.set_contents_from_filename(filename)
 
@@ -130,7 +132,7 @@ for prefix in inputs:
       update_folder = os.path.join(work_folder, "update")
       shutil.rmtree(update_folder, ignore_errors = True)
       mkdirp(update_folder)
-      updateresults(data_folder, update_folder, publish_bucket,
+      updateresults(data_folder, update_folder, publish_bucket_name,
                     publish_prefix, cache_folder, 'us-west-2',
                     aws_cred, 16)
       # Update processed files
@@ -148,6 +150,8 @@ for prefix in inputs:
       mkdirp(data_folder)
       count = 0
   except:
+    print_exc(file = sys.stderr)
+    sys.exit(1)
     # Okay, everything since last publication failed
     count = 0
     missing += processed
