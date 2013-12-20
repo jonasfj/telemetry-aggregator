@@ -129,11 +129,11 @@ for prefix in inputs:
         for p in parts:
           missing.append(p.strip())
     count += 1
-    if count >= 2:
+    if count >= 3:
       print "Publishing results"
       # Create work folder for update process
       update_folder = os.path.join(work_folder, "update")
-      shutil.rmtree(update_folder, ignore_errors = True)
+      rmtree(update_folder, ignore_errors = True)
       mkdirp(update_folder)
       updateresults(data_folder, update_folder, publish_bucket_name,
                     publish_prefix, cache_folder, 'us-west-2',
