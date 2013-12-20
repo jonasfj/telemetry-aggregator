@@ -114,7 +114,7 @@ for prefix in inputs:
   try:
     get_input(prefix + 'parts', parts_path)
     #get_input(prefix + 'result.txt.lz4', result_path)
-    do("aws s3 cp s3://dashboard-mango-aggregates/" + prefix + result.txt.lz4 + " " + result_path)
+    do("aws s3 cp s3://dashboard-mango-aggregates/" + prefix + 'result.txt.lz4 ' + result_path)
     print "Downloaded %s in %s s" % (prefix, (datetime.utcnow() - started).seconds)
     if handle_input():
       print "Handled input in %s s" % ((datetime.utcnow() - started).seconds)
