@@ -41,6 +41,7 @@ def get_input(prefix, path):
   while retries < 10:
     try:
       k.get_contents_to_filename(path)
+      break
     except:
       retries += 1
       if retries > 10:
