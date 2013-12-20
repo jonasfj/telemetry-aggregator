@@ -129,7 +129,7 @@ for prefix in inputs:
         for p in parts:
           missing.append(p.strip())
     count += 1
-    if count > 4:
+    if count >= 2:
       print "Publishing results"
       # Create work folder for update process
       update_folder = os.path.join(work_folder, "update")
